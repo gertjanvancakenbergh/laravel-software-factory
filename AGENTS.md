@@ -27,6 +27,17 @@ These rules apply to every agent working in this repository. They are non-negoti
 - Style is enforced by Pint. Static analysis by PHPStan / Larastan.
 - Use Laravel PAO so test and Artisan output is structured for agents.
 
+## Database conventions (MySQL / MariaDB)
+
+- Schema lives only in migrations. No ad-hoc SQL changes.
+- Use InnoDB. Prefer foreign key constraints and unique indexes at the database level.
+- Index foreign keys, filter columns, and common composite query patterns. Column order in composite indexes matters.
+- Prefer the `mariadb` driver when targeting MariaDB (especially for vector features).
+- Avoid N+1 queries; use eager loading. Review with EXPLAIN when performance matters.
+- Split dangerous migrations (long locks, non-compatible changes) across deploys. Use `migrate --pretend` for review.
+- Correct types: decimal for money, appropriate string lengths, timestamps with timezone awareness where needed.
+- Database Specialist owns schema design, indexes, and query performance review.
+
 ## Frontend conventions (when a React frontend is in scope)
 
 - React + TypeScript + Vite + Tailwind CSS.

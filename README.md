@@ -1,6 +1,6 @@
 # Laravel Software Factory
 
-A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend and UX/UI support.
+A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, and database support.
 
 ## What this is
 
@@ -43,6 +43,7 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/reviewer.md` | Fresh dual-axis code review |
 | `agents/react-frontend-specialist.md` | Builds the React + TypeScript + Tailwind frontend |
 | `agents/ux-ui-specialist.md` | Owns UX, visual design, and the Tailwind-based design system |
+| `agents/database-specialist.md` | MySQL/MariaDB schema, migrations, indexes, and query performance |
 
 ## Conventions
 
@@ -50,4 +51,4 @@ See `AGENTS.md` for the full set of Laravel and factory rules that every agent m
 
 ## Assignment included
 
-`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend specialists can be engaged when a UI is required.
+`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend and database specialists can be engaged as needed.
