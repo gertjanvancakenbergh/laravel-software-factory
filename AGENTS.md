@@ -47,6 +47,17 @@ These rules apply to every agent working in this repository. They are non-negoti
 - Components must be accessible and handle loading/empty/error states.
 - Tailwind utilities (or a consistent token-based system on top of Tailwind) are the default styling approach.
 
+## Testing conventions
+
+- QA Test Lead devises the test plan and coverage requirements.
+- Unit Testing Specialist implements Pest unit and Feature tests.
+- Playwright Specialist implements critical E2E journeys (few, high-value only).
+- Every API endpoint needs Feature tests (happy path, validation, 404, auth when applicable).
+- Critical domain logic needs unit tests.
+- Architecture tests enforce structural rules.
+- Tests are independent, use factories, and protect behavior rather than implementation.
+- CI must be green (Pest + any Playwright suite) before merge.
+
 ## Project layout (API)
 
 ```
