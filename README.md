@@ -42,6 +42,7 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/laravel-specialist.md` | Enforces Laravel conventions and architecture tests |
 | `agents/reviewer.md` | Fresh dual-axis code review |
 | `agents/react-frontend-specialist.md` | Builds the React + TypeScript + Tailwind frontend |
+| `agents/typescript-specialist.md` | Owns TypeScript strictness, type contracts, and API type sync |
 | `agents/ux-ui-specialist.md` | Owns UX, visual design, and the Tailwind-based design system |
 | `agents/database-specialist.md` | MySQL/MariaDB schema, migrations, indexes, and query performance |
 | `agents/qa-test-lead.md` | Devises the test strategy and coordinates testing |
