@@ -1,0 +1,10 @@
+{
+  "name": "laravel-software-factory",
+  "description": "Matt Pocock-style software factory for professional Laravel APIs",
+  "private": true,
+  "scripts": {
+    "test": "vendor/bin/pest --parallel",
+    "lint": "vendor/bin/pint --test",
+    "analyse": "vendor/bin/phpstan analyse"
+  }
+}
