@@ -1,6 +1,6 @@
 # Laravel Software Factory
 
-A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, database, QA, and security support.
+A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, database, QA, security, and supporting specialists.
 
 ## What this is
 
@@ -44,7 +44,17 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/react-frontend-specialist.md` | Builds the React + TypeScript + Tailwind frontend |
 | `agents/typescript-specialist.md` | Owns TypeScript strictness, type contracts, and API type sync |
 | `agents/ux-ui-specialist.md` | Owns UX, visual design, and the Tailwind-based design system |
+| `agents/accessibility-specialist.md` | WCAG, keyboard navigation, screen-reader, inclusive design |
+| `agents/frontend-architecture-specialist.md` | Component structure, state boundaries, folder organization |
 | `agents/database-specialist.md` | MySQL/MariaDB schema, migrations, indexes, and query performance |
+| `agents/data-migration-specialist.md` | Safe, reversible migrations and data backfills |
+| `agents/performance-specialist.md` | N+1, slow queries, heavy endpoints, frontend performance |
+| `agents/caching-queue-specialist.md` | Redis caching, queue design, job idempotency |
+| `agents/api-design-specialist.md` | Consistent API design, pagination, errors, versioning |
+| `agents/documentation-specialist.md` | API docs, README, ADRs |
+| `agents/devops-ci-specialist.md` | GitHub Actions, deployment, CI reliability |
+| `agents/observability-specialist.md` | Logging, metrics, tracing, error tracking |
+| `agents/privacy-compliance-specialist.md` | PII handling, retention, consent, auditability |
 | `agents/qa-test-lead.md` | Devises the test strategy and coordinates testing |
 | `agents/playwright-specialist.md` | Implements Playwright E2E / browser tests |
 | `agents/unit-testing-specialist.md` | Implements Pest unit and Feature tests |
@@ -61,4 +71,4 @@ See `AGENTS.md` for the full set of Laravel and factory rules that every agent m
 
 ## Assignment included
 
-`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend, database, QA, and security specialists can be engaged as needed.
+`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend, database, QA, security, and supporting specialists can be engaged as needed.

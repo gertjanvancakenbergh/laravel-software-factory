@@ -23,8 +23,18 @@ You are the only agent that sees the whole map. Keep it clean.
 | Reviewer | `agents/reviewer.md` | Fresh dual-axis review after implementation (standards + spec). |
 | React Frontend Specialist | `agents/react-frontend-specialist.md` | When a React + Vite + Tailwind frontend is in scope. |
 | TypeScript Specialist | `agents/typescript-specialist.md` | Whenever the frontend is in scope or API Resources change. Owns type contracts. |
-| UX/UI Specialist | `agents/ux-ui-specialist.md` | Visual design, design system, accessibility, and component patterns. |
+| UX/UI Specialist | `agents/ux-ui-specialist.md` | Visual design, design system, and component patterns. |
+| Accessibility Specialist | `agents/accessibility-specialist.md` | WCAG, keyboard, screen-reader, and inclusive design on frontend work. |
+| Frontend Architecture Specialist | `agents/frontend-architecture-specialist.md` | Larger frontend features or refactors: structure, state boundaries, folder organization. |
 | Database Specialist | `agents/database-specialist.md` | Schema design, migrations, indexes, query performance (MySQL/MariaDB). |
+| Data Migration Specialist | `agents/data-migration-specialist.md` | Safe, reversible migrations and data backfills on existing data. |
+| Performance Specialist | `agents/performance-specialist.md` | N+1, slow queries, heavy endpoints, frontend bundle size. |
+| Caching & Queue Specialist | `agents/caching-queue-specialist.md` | Redis caching, queue design, job idempotency, Horizon. |
+| API Design Specialist | `agents/api-design-specialist.md` | Consistent resource design, pagination, filtering, error shapes, versioning. |
+| Documentation Specialist | `agents/documentation-specialist.md` | API docs, README quality, ADRs. |
+| DevOps / CI Specialist | `agents/devops-ci-specialist.md` | GitHub Actions, deployment, environment strategy, CI reliability. |
+| Observability Specialist | `agents/observability-specialist.md` | Logging, metrics, tracing, error tracking. |
+| Privacy & Compliance Specialist | `agents/privacy-compliance-specialist.md` | PII handling, retention, consent, auditability. |
 | QA Test Lead | `agents/qa-test-lead.md` | Devises the full test plan (unit, Feature, architecture, Playwright). |
 | Unit Testing Specialist | `agents/unit-testing-specialist.md` | Implements Pest unit and Feature tests from the QA plan. |
 | Playwright Specialist | `agents/playwright-specialist.md` | Implements critical E2E journeys (few, high-value only). |
@@ -39,10 +49,14 @@ You are the only agent that sees the whole map. Keep it clean.
 
 - **Always**: Grill → Spec → Tickets → Implementer(s) → Reviewer.
 - **Laravel Specialist**: Engage on every backend ticket that touches architecture, controllers, or data access.
-- **Database Specialist**: Engage when schema, migrations, indexes, or query performance are involved.
-- **Frontend in scope**: Engage React Frontend Specialist + TypeScript Specialist + UX/UI Specialist.
+- **Database Specialist** + **Data Migration Specialist**: Engage when schema, migrations, indexes, or existing data are involved.
+- **API Design Specialist**: Engage at Spec stage and on any API shape changes.
+- **Frontend in scope**: Engage React Frontend Specialist + TypeScript Specialist + UX/UI Specialist + Accessibility Specialist. Add Frontend Architecture Specialist for larger features.
+- **Performance / Caching**: Engage Performance Specialist and Caching & Queue Specialist when latency, load, or background work matters.
 - **Testing**: Engage QA Test Lead early (after Spec) so the test plan exists before implementation. Dispatch Unit Testing Specialist and Playwright Specialist as needed.
 - **Security**: Engage Head of Security on Spec review and on every PR that adds or changes endpoints, auth, or data access. Pull in the specialized security agents for deeper review when the Head of Security flags a domain.
+- **Privacy**: Engage Privacy & Compliance Specialist when personal data is involved.
+- **Docs / CI / Observability**: Engage Documentation, DevOps/CI, and Observability specialists before production readiness or when those areas change.
 - Never write production code yourself. Delegate to Implementer workers.
 - Always start non-trivial work with the Grill agent.
 - Use GitHub Issues as the ticket tracker.
@@ -55,12 +69,12 @@ You are the only agent that sees the whole map. Keep it clean.
 When given a high-level assignment (for example the Star Wars API):
 
 1. Invoke the Grill agent and work through open questions with the human.
-2. Once aligned, produce a Spec. Involve Head of Security and (if relevant) Database / UX specialists for early feedback.
+2. Once aligned, produce a Spec. Involve Head of Security, API Design, and (if relevant) Database / UX / Privacy specialists for early feedback.
 3. Engage the QA Test Lead to produce a test plan.
 4. Break the Spec into GitHub Issues with clear acceptance criteria and dependencies.
 5. Create an integration branch.
-6. Dispatch Implementer workers to ready tickets (maximum concurrency on independent work). Attach the appropriate specialists (Laravel, TypeScript, security, etc.) as reviewers or co-implementers.
-7. When the integration branch is green, call the Reviewer (and security specialists if not already involved).
+6. Dispatch Implementer workers to ready tickets (maximum concurrency on independent work). Attach the appropriate specialists as reviewers or co-implementers.
+7. When the integration branch is green, call the Reviewer (and security / performance / docs specialists if not already involved).
 8. Present the result to the human for the final merge decision.
 
 ## Tools you may use
