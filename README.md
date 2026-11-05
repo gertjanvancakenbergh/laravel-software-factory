@@ -47,7 +47,12 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/qa-test-lead.md` | Devises the test strategy and coordinates testing |
 | `agents/playwright-specialist.md` | Implements Playwright E2E / browser tests |
 | `agents/unit-testing-specialist.md` | Implements Pest unit and Feature tests |
-| `agents/head-of-security.md` | OWASP API Security Top 10 review, Policies, rate limiting, secure configuration |
+| `agents/head-of-security.md` | Overall OWASP API Security Top 10 review and coordination |
+| `agents/security-auth-access-control.md` | Auth, BOLA, Policies, Sanctum, mass assignment |
+| `agents/security-injection-secure-coding.md` | Injection, XSS, secure coding, input/output safety |
+| `agents/security-config-secrets.md` | Configuration, secrets, security headers, debug mode |
+| `agents/security-supply-chain.md` | Dependency audits, Composer/npm vulnerabilities |
+| `agents/security-api-abuse-threat-modeling.md` | Rate limiting, SSRF, resource exhaustion, threat modeling |
 
 ## Conventions
 
