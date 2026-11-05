@@ -6,7 +6,7 @@ These rules apply to every agent working in this repository. They are non-negoti
 
 - Non-trivial work starts with grilling. Never jump straight to code.
 - Specs and tickets live in GitHub Issues. Tickets must be small enough for one agent session.
-- Implementation is test-first (Pest). Red → green → refactor.
+- Implementation is test-first (Pest for backend, Vitest for frontend). Red → green → refactor.
 - Every change is reviewed by a fresh agent against both coding standards and the original spec.
 - Agents work in isolated git worktrees. Never commit directly to main.
 - Human owns intent, architecture decisions, and the final merge gate.
@@ -26,6 +26,15 @@ These rules apply to every agent working in this repository. They are non-negoti
   - Actions/Services are pure enough to unit test.
 - Style is enforced by Pint. Static analysis by PHPStan / Larastan.
 - Use Laravel PAO so test and Artisan output is structured for agents.
+
+## Frontend conventions (when a React frontend is in scope)
+
+- React + TypeScript + Vite + Tailwind CSS.
+- TanStack Query for server state.
+- Design system and visual decisions owned by the UX/UI Specialist.
+- Implementation owned by the React Frontend Specialist.
+- Components must be accessible and handle loading/empty/error states.
+- Tailwind utilities (or a consistent token-based system on top of Tailwind) are the default styling approach.
 
 ## Project layout (API)
 
