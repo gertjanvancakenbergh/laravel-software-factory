@@ -58,6 +58,16 @@ These rules apply to every agent working in this repository. They are non-negoti
 - Tests are independent, use factories, and protect behavior rather than implementation.
 - CI must be green (Pest + any Playwright suite) before merge.
 
+## Security conventions
+
+- Head of Security owns OWASP API Security Top 10 review.
+- Every endpoint that accesses user or sensitive data must have a Policy (or equivalent ownership check). No raw `findOrFail` without authorization.
+- Input is validated only through Form Requests; output is shaped only through API Resources.
+- Rate limiting is required on public and write endpoints.
+- `APP_DEBUG=false` in production. Secrets never committed.
+- Prefer Sanctum with token expiry and abilities when authentication is needed.
+- Run `composer audit` in CI. Security findings that allow unauthorized access are blocking.
+
 ## Project layout (API)
 
 ```

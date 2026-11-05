@@ -1,6 +1,6 @@
 # Laravel Software Factory
 
-A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, database, and QA support.
+A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, database, QA, and security support.
 
 ## What this is
 
@@ -47,6 +47,7 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/qa-test-lead.md` | Devises the test strategy and coordinates testing |
 | `agents/playwright-specialist.md` | Implements Playwright E2E / browser tests |
 | `agents/unit-testing-specialist.md` | Implements Pest unit and Feature tests |
+| `agents/head-of-security.md` | OWASP API Security Top 10 review, Policies, rate limiting, secure configuration |
 
 ## Conventions
 
@@ -54,4 +55,4 @@ See `AGENTS.md` for the full set of Laravel and factory rules that every agent m
 
 ## Assignment included
 
-`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend, database, and QA specialists can be engaged as needed.
+`examples/star-wars-assignment.md` is a complete, professional-grade assignment for a Star Wars encyclopedia API. It is written so the factory can take it and produce a working, tested application. Frontend, database, QA, and security specialists can be engaged as needed.
