@@ -2,9 +2,11 @@
 
 A Matt Pocock-style software factory specialized for professional Laravel API applications, with optional React frontend, UX/UI, database, QA, security, and supporting specialists.
 
+**Status: production-grade ready.** See `docs/production.md` for the checklist.
+
 ## What this is
 
-A complete set of agent definitions, conventions, and GitHub workflows that turn an idea into a tested, reviewable Laravel API (and frontend when needed). Built around the Grill → Spec → Tickets → Implement (TDD) → Review pipeline.
+A complete set of agent definitions, conventions, job-state management, safety rules, and GitHub workflows that turn an idea into a tested, reviewable Laravel API (and frontend when needed). Built around the Grill → Intake → Spec → Tickets → Implement (TDD) → Gate → Review → Approver pipeline.
 
 ## Quick start
 
@@ -19,28 +21,54 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 
 2. Copy the contents of this folder into the root of your Laravel project (or merge).
 
-3. Install Matt Pocock skills (recommended):
+3. Make the factory scripts executable:
+   ```bash
+   chmod +x factory/bin/* factory/checks.sh
+   ```
+
+4. Install Matt Pocock skills (recommended):
    ```bash
    npx skills@latest add mattpocock/skills
    ```
    Then run `/setup-matt-pocock-skills` and choose GitHub as the issue tracker.
 
-4. Give the factory the assignment:
+5. Choose a mode:
+   ```bash
+   ./factory/bin/factory mode manual   # interactive Grill (default)
+   ./factory/bin/factory mode auto     # process labeled issues
+   ```
+
+6. Give the factory the assignment:
    - Open `examples/star-wars-assignment.md`
-   - Hand it to the Orchestrator agent (or paste into Claude Code / Codex / OpenCode)
+   - Hand it to the Orchestrator agent (or paste into Claude Code / Codex / OpenCode / Grok)
    - Follow the agent flow
 
-5. GitHub Actions will run Pest, Pint, and PHPStan on every PR.
+7. GitHub Actions runs the full deterministic gate (Pest, Pint, PHPStan, optional frontend) on every PR. Require this status check on `main`.
+
+## Factory commands
+
+```bash
+./factory/bin/factory mode          # show / set auto|manual
+./factory/bin/factory run <issue>   # prepare a job (auto mode)
+./factory/bin/factory status        # list jobs
+./factory/bin/factory grill         # start Grill (manual mode)
+./factory/bin/job create|update|show|list
+./factory/checks.sh                 # run the gate locally
+```
+
+Open `factory/dashboard.html` for a simple overview.
 
 ## Agent team
 
 | File | Role |
 |------|------|
-| `agents/orchestrator.md` | Routes the full pipeline, owns the map |
-| `agents/grill.md` | Interrogates intent, builds domain language |
+| `agents/orchestrator.md` | Routes the full pipeline, owns the map, recovery, and learning |
+| `agents/grill.md` | Interrogates intent, builds domain language (manual mode) |
+| `agents/intake.md` | Scope, risk, and surfaces assessment |
 | `agents/implementer.md` | TDD worker for a single ticket (isolated worktree) |
 | `agents/laravel-specialist.md` | Enforces Laravel conventions and architecture tests |
 | `agents/reviewer.md` | Fresh dual-axis code review |
+| `agents/approver.md` | Merge recommendation (APPROVE / NEEDS-CHANGES / ESCALATE) |
 | `agents/react-frontend-specialist.md` | Builds the React + TypeScript + Tailwind frontend |
 | `agents/typescript-specialist.md` | Owns TypeScript strictness, type contracts, and API type sync |
 | `agents/ux-ui-specialist.md` | Owns UX, visual design, and the Tailwind-based design system |
@@ -65,9 +93,16 @@ A complete set of agent definitions, conventions, and GitHub workflows that turn
 | `agents/security-supply-chain.md` | Dependency audits, Composer/npm vulnerabilities |
 | `agents/security-api-abuse-threat-modeling.md` | Rate limiting, SSRF, resource exhaustion, threat modeling |
 
-## Conventions
+## Key docs
 
-See `AGENTS.md` for the full set of Laravel and factory rules that every agent must follow.
+- `docs/production.md` — production-grade checklist
+- `docs/modes.md` — auto vs manual
+- `docs/gate.md` + `factory/checks.sh` — deterministic gate
+- `docs/routing.md` — risk- and surface-based specialist routing
+- `docs/safety.md` — protected paths
+- `docs/recovery.md` — what to do when something fails
+- `docs/observability.md` — tracking the factory itself
+- `AGENTS.md` — conventions every agent must follow
 
 ## Assignment included
 
