@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # Laravel Software Factory entrypoint
 # Usage:
-#   factory mode          # show current mode
-#   factory mode auto     # switch to auto
-#   factory mode manual   # switch to manual
-#   factory run           # auto: process labeled issues or accept a prompt
-#   factory run <issue>   # process a specific issue
-#   factory grill         # manual: start interactive grill
+#   factory mode                 # show current mode
+#   factory mode auto|manual     # switch mode
+#   factory run                  # auto: list labeled issues and print next action
+#   factory run <issue-number>   # auto: prepare a job for a specific issue
+#   factory grill                # manual: remind to start Grill
+#   factory status               # list current jobs
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CONFIG="$ROOT/factory/config.json"
+JOB="$ROOT/factory/bin/job"
 
 mode() {
   if [ $# -eq 0 ]; then
@@ -32,11 +33,22 @@ case "${1:-}" in
       echo "Auto mode is not active. Run: factory mode auto"
       exit 1
     fi
-    echo "Auto mode: processing queue..."
-    # Placeholder: in practice the orchestrator / agent reads issues labeled 'factory'
-    # and drives Intake → Spec → Tickets → Implement → Gate → Review
-    echo "Look for issues labeled 'factory' or pass a prompt to the Orchestrator."
-    echo "Gate command: $ROOT/factory/checks.sh"
+    ISSUE="${2:-}"
+    if [ -n "$ISSUE" ]; then
+      echo "Preparing job for issue #$ISSUE"
+      "$JOB" create "$ISSUE" "Issue #$ISSUE" || true
+      "$JOB" show "$ISSUE"
+      echo ""
+      echo "Next: hand this to the Orchestrator with the issue body."
+      echo "Pipeline: Intake → Spec → Tickets → Implement → Gate → Review → Approver"
+      echo "Gate: $ROOT/factory/checks.sh"
+    else
+      echo "Auto mode ready."
+      echo "Label issues with 'factory' then run: factory run <issue-number>"
+      echo "Or give a prompt directly to the Orchestrator."
+      echo "Current jobs:"
+      "$JOB" list
+    fi
     ;;
   grill)
     CURRENT=$(mode)
@@ -44,12 +56,14 @@ case "${1:-}" in
       echo "Manual mode is not active. Run: factory mode manual"
       exit 1
     fi
-    echo "Manual mode: start the Grill agent."
-    echo "The Grill agent will ask clarifying questions before any Spec or implementation."
-    echo "See agents/grill.md"
+    echo "Manual mode: start the Grill agent (agents/grill.md)."
+    echo "Grill will ask questions and require explicit permission before Spec or implementation."
+    ;;
+  status)
+    "$JOB" list
     ;;
   *)
-    echo "Usage: factory {mode|run|grill}"
+    echo "Usage: factory {mode|run|grill|status}"
     exit 1
     ;;
 esac

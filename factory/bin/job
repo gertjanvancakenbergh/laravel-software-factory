@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Job state manager for the Laravel Software Factory
+# Usage:
+#   job create <ticket-id> [title]
+#   job update <ticket-id> <field> <value>
+#   job show <ticket-id>
+#   job list
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+JOBS="$ROOT/docs/context/jobs"
+mkdir -p "$JOBS"
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  create)
+    ID="${1:?ticket id required}"
+    TITLE="${2:-Untitled}"
+    FILE="$JOBS/$ID.md"
+    if [ -f "$FILE" ]; then
+      echo "Job $ID already exists"
+      exit 1
+    fi
+    cat > "$FILE" << EOF
+# Job $ID
+
+- **Ticket**: #$ID
+- **Title**: $TITLE
+- **Stage**: intake
+- **Verdict / Risk**: pending
+- **Surfaces**:
+- **Worktree / Branch**:
+- **Gate**: pending
+- **Specialists engaged**:
+- **Open findings**:
+- **Approver recommendation**: pending
+- **Last update**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+- **Started**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
+    echo "Created $FILE"
+    ;;
+  update)
+    ID="${1:?ticket id required}"
+    FIELD="${2:?field required}"
+    VALUE="${3:?value required}"
+    FILE="$JOBS/$ID.md"
+    if [ ! -f "$FILE" ]; then
+      echo "Job $ID not found"
+      exit 1
+    fi
+    # Simple line replacement for known fields
+    case "$FIELD" in
+      stage|risk|surfaces|worktree|gate|specialists|findings|approver)
+        sed -i.bak "s/^- \*\*${FIELD^}.*\*/- **${FIELD^}**: $VALUE/" "$FILE" 2>/dev/null || \
+        sed -i.bak "s/^- \*\*Verdict \/ Risk.*/- **Verdict \/ Risk**: $VALUE/" "$FILE" 2>/dev/null || true
+        # Fallback: append if not found
+        if ! grep -q "\*\*${FIELD^}" "$FILE"; then
+          echo "- **${FIELD^}**: $VALUE" >> "$FILE"
+        fi
+        sed -i.bak "s/^- \*\*Last update.*/- **Last update**: $(date -u +%Y-%m-%dT%H:%M:%SZ)/" "$FILE"
+        rm -f "$FILE.bak"
+        echo "Updated $ID $FIELD"
+        ;;
+      *)
+        echo "Unknown field. Use: stage, risk, surfaces, worktree, gate, specialists, findings, approver"
+        exit 1
+        ;;
+    esac
+    ;;
+  show)
+    ID="${1:?ticket id required}"
+    cat "$JOBS/$ID.md" 2>/dev/null || { echo "Job $ID not found"; exit 1; }
+    ;;
+  list)
+    if [ -z "$(ls -A "$JOBS" 2>/dev/null)" ]; then
+      echo "No jobs yet."
+    else
+      for f in "$JOBS"/*.md; do
+        [ -f "$f" ] || continue
+        ID=$(basename "$f" .md)
+        STAGE=$(grep -m1 'Stage' "$f" | sed 's/.*: //' || echo "?")
+        GATE=$(grep -m1 'Gate' "$f" | sed 's/.*: //' || echo "?")
+        echo "$ID  stage=$STAGE  gate=$GATE"
+      done
+    fi
+    ;;
+  *)
+    echo "Usage: job {create|update|show|list}"
+    exit 1
+    ;;
+esac

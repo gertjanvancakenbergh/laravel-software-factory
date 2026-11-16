@@ -5,34 +5,62 @@
   <title>Laravel Software Factory</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f172a; color: #e2e8f0; }
-    h1 { margin-bottom: 0.5rem; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: #94a3b8; margin-bottom: 1.5rem; }
     .mode { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.875rem; }
     .manual { background: #1e40af; }
     .auto { background: #166534; }
-    .card { background: #1e293b; border-radius: 0.5rem; padding: 1rem; margin: 1rem 0; }
-    .label { font-size: 0.75rem; color: #94a3b8; }
+    .card { background: #1e293b; border-radius: 0.5rem; padding: 1rem 1.25rem; margin: 1rem 0; }
+    .label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+    code { background: #334155; padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.9em; }
+    ul { margin: 0.5rem 0; }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+    .stat { background: #334155; border-radius: 0.375rem; padding: 0.75rem; }
+    .stat strong { display: block; font-size: 1.25rem; }
   </style>
 </head>
 <body>
   <h1>Laravel Software Factory</h1>
-  <p>Mode: <span id="mode" class="mode manual">manual</span></p>
+  <p class="subtitle">Production-grade agentic pipeline · Model-agnostic · GitHub-centric</p>
+
   <div class="card">
-    <div class="label">How to use</div>
+    <div class="label">Mode</div>
+    <p>Current default: <span class="mode manual">manual</span></p>
     <ul>
       <li><code>./factory/bin/factory mode auto</code> — autonomous pipeline</li>
       <li><code>./factory/bin/factory mode manual</code> — interactive Grill</li>
-      <li><code>./factory/bin/factory run</code> — process queue (auto)</li>
-      <li><code>./factory/bin/factory grill</code> — start Grill (manual)</li>
-      <li><code>./factory/checks.sh</code> — run the gate</li>
     </ul>
   </div>
+
+  <div class="card">
+    <div class="label">Commands</div>
+    <ul>
+      <li><code>./factory/bin/factory run &lt;issue&gt;</code> — prepare a job (auto)</li>
+      <li><code>./factory/bin/factory status</code> — list jobs</li>
+      <li><code>./factory/bin/factory grill</code> — start Grill (manual)</li>
+      <li><code>./factory/bin/job create|update|show|list</code> — manage job state</li>
+      <li><code>./factory/checks.sh</code> — run the deterministic gate</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="label">Pipeline</div>
+    <p>Grill / Intake → Spec → Tickets → Implement (worktrees) → <strong>Gate</strong> → Review (risk-routed) → Approver → Human merge</p>
+  </div>
+
   <div class="card">
     <div class="label">Job state</div>
-    <p>Place job records in <code>docs/context/jobs/</code> or as comments on GitHub issues. This dashboard is a starting point — extend it to read those files.</p>
+    <p>Live jobs live in <code>docs/context/jobs/</code>. Run <code>./factory/bin/job list</code> or open those files.</p>
+    <p>This dashboard is intentionally simple. Extend it to fetch and render the Markdown job files for a richer view.</p>
   </div>
-  <script>
-    // Simple static example; replace with fetch of config or job files as needed
-    document.getElementById('mode').textContent = 'manual';
-  </script>
+
+  <div class="card">
+    <div class="label">Safety & recovery</div>
+    <ul>
+      <li>Protected paths: <code>docs/safety.md</code></li>
+      <li>Recovery paths: <code>docs/recovery.md</code></li>
+      <li>Gate is enforced in GitHub Actions (required for merge)</li>
+    </ul>
+  </div>
 </body>
 </html>
