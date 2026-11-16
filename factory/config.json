@@ -2,8 +2,12 @@
   "mode": "manual",
   "concurrency": 3,
   "gate_required": true,
+  "gate": {
+    "frontend": "auto"
+  },
   "labels": {
     "queue": "factory",
+    "in_progress": "factory:in-progress",
     "needs_human": "factory:needs-human"
   }
 }
