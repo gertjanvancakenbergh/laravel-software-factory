@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Laravel Software Factory entrypoint
+# Usage:
+#   factory mode          # show current mode
+#   factory mode auto     # switch to auto
+#   factory mode manual   # switch to manual
+#   factory run           # auto: process labeled issues or accept a prompt
+#   factory run <issue>   # process a specific issue
+#   factory grill         # manual: start interactive grill
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CONFIG="$ROOT/factory/config.json"
+
+mode() {
+  if [ $# -eq 0 ]; then
+    jq -r '.mode' "$CONFIG"
+  else
+    jq --arg m "$1" '.mode = $m' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+    echo "Mode set to $1"
+  fi
+}
+
+case "${1:-}" in
+  mode)
+    shift
+    mode "$@"
+    ;;
+  run)
+    CURRENT=$(mode)
+    if [ "$CURRENT" != "auto" ]; then
+      echo "Auto mode is not active. Run: factory mode auto"
+      exit 1
+    fi
+    echo "Auto mode: processing queue..."
+    # Placeholder: in practice the orchestrator / agent reads issues labeled 'factory'
+    # and drives Intake → Spec → Tickets → Implement → Gate → Review
+    echo "Look for issues labeled 'factory' or pass a prompt to the Orchestrator."
+    echo "Gate command: $ROOT/factory/checks.sh"
+    ;;
+  grill)
+    CURRENT=$(mode)
+    if [ "$CURRENT" != "manual" ]; then
+      echo "Manual mode is not active. Run: factory mode manual"
+      exit 1
+    fi
+    echo "Manual mode: start the Grill agent."
+    echo "The Grill agent will ask clarifying questions before any Spec or implementation."
+    echo "See agents/grill.md"
+    ;;
+  *)
+    echo "Usage: factory {mode|run|grill}"
+    exit 1
+    ;;
+esac

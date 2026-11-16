@@ -1,0 +1,9 @@
+{
+  "mode": "manual",
+  "concurrency": 3,
+  "gate_required": true,
+  "labels": {
+    "queue": "factory",
+    "needs_human": "factory:needs-human"
+  }
+}

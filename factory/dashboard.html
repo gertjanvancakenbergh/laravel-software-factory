@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Laravel Software Factory</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f172a; color: #e2e8f0; }
+    h1 { margin-bottom: 0.5rem; }
+    .mode { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.875rem; }
+    .manual { background: #1e40af; }
+    .auto { background: #166534; }
+    .card { background: #1e293b; border-radius: 0.5rem; padding: 1rem; margin: 1rem 0; }
+    .label { font-size: 0.75rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <h1>Laravel Software Factory</h1>
+  <p>Mode: <span id="mode" class="mode manual">manual</span></p>
+  <div class="card">
+    <div class="label">How to use</div>
+    <ul>
+      <li><code>./factory/bin/factory mode auto</code> — autonomous pipeline</li>
+      <li><code>./factory/bin/factory mode manual</code> — interactive Grill</li>
+      <li><code>./factory/bin/factory run</code> — process queue (auto)</li>
+      <li><code>./factory/bin/factory grill</code> — start Grill (manual)</li>
+      <li><code>./factory/checks.sh</code> — run the gate</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="label">Job state</div>
+    <p>Place job records in <code>docs/context/jobs/</code> or as comments on GitHub issues. This dashboard is a starting point — extend it to read those files.</p>
+  </div>
+  <script>
+    // Simple static example; replace with fetch of config or job files as needed
+    document.getElementById('mode').textContent = 'manual';
+  </script>
+</body>
+</html>
