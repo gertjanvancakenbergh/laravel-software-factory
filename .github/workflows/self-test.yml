@@ -1,0 +1,45 @@
+# Tests the factory's own scripts. Not installed into projects.
+name: Factory self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: shellcheck + bats (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runs the scripts under its default bash 3.2.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install tools (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y shellcheck bats jq
+
+      - name: Install tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install shellcheck bats-core jq
+
+      # Put Apple's bash 3.2 first on PATH so `#!/usr/bin/env bash` resolves to it.
+      - name: Use system bash 3.2 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p "$RUNNER_TEMP/oldbash"
+          ln -s /bin/bash "$RUNNER_TEMP/oldbash/bash"
+          echo "$RUNNER_TEMP/oldbash" >> "$GITHUB_PATH"
+          /bin/bash --version | head -1
+
+      - name: shellcheck
+        run: shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh tests/*.bash
+
+      - name: bats
+        run: bats tests/
