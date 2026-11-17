@@ -88,6 +88,9 @@ encyclopedia API; `examples/starter-prompt.md` starts the Orchestrator on it.
 
 ## Developing the factory
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the git workflow (short-lived
+branches, Conventional Commits, PRs, protected `main`). Checks to run:
+
 ```bash
 shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh factory/docker/*.sh tests/*.bash
 bats tests/
