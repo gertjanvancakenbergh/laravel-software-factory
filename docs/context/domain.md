@@ -1,10 +1,10 @@
 # Domain Language
 
-Living document. Owned by the Grill agent; updates approved by the Orchestrator.
+Living document. Written by Intake while grilling; changes approved by the Orchestrator. Implementers and reviewers use these terms in code, routes and tests.
 
 ## Core concepts
 
-(Add terms as the Grill process produces them.)
+(Add terms during Intake. See `docs/factory/examples/star-wars-glossary.md` for an example.)
 
 ## Bounded contexts
 

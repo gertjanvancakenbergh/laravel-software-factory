@@ -1,93 +1,170 @@
 #!/usr/bin/env bash
-# Job state manager for the Laravel Software Factory
-# Usage:
-#   job create <ticket-id> [title]
-#   job update <ticket-id> <field> <value>
-#   job show <ticket-id>
-#   job list
-
+# Job state manager. Each job is a JSON file in docs/context/jobs/<id>.json.
+#
+#   job create <id> [title]
+#   job update <id> <field> <value>     scalar fields
+#   job add    <id> <field> <value>     list fields (append, de-duplicated)
+#   job remove <id> <field> <value>     list fields
+#   job show   <id> [--json]
+#   job list   [--json]
+#
+# Scalar fields: title stage verdict risk branch approver
+# List fields:   surfaces specialists findings
+# The gate result is written only by `factory gate <id>`, never by hand.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-JOBS="$ROOT/docs/context/jobs"
-mkdir -p "$JOBS"
+# shellcheck source=../lib/common.sh
+. "$(cd "$(dirname "$0")/../lib" && pwd)/common.sh"
 
-cmd="${1:-}"
-shift || true
+SCALARS="title stage verdict risk branch approver"
+LISTS="surfaces specialists findings"
 
-case "$cmd" in
-  create)
-    ID="${1:?ticket id required}"
-    TITLE="${2:-Untitled}"
-    FILE="$JOBS/$ID.md"
-    if [ -f "$FILE" ]; then
-      echo "Job $ID already exists"
-      exit 1
-    fi
-    cat > "$FILE" << EOF
-# Job $ID
+usage() {
+  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
+}
 
-- **Ticket**: #$ID
-- **Title**: $TITLE
-- **Stage**: intake
-- **Verdict / Risk**: pending
-- **Surfaces**:
-- **Worktree / Branch**:
-- **Gate**: pending
-- **Specialists engaged**:
-- **Open findings**:
-- **Approver recommendation**: pending
-- **Last update**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-- **Started**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-EOF
-    echo "Created $FILE"
-    ;;
-  update)
-    ID="${1:?ticket id required}"
-    FIELD="${2:?field required}"
-    VALUE="${3:?value required}"
-    FILE="$JOBS/$ID.md"
-    if [ ! -f "$FILE" ]; then
-      echo "Job $ID not found"
-      exit 1
-    fi
-    # Simple line replacement for known fields
-    case "$FIELD" in
-      stage|risk|surfaces|worktree|gate|specialists|findings|approver)
-        sed -i.bak "s/^- \*\*${FIELD^}.*\*/- **${FIELD^}**: $VALUE/" "$FILE" 2>/dev/null || \
-        sed -i.bak "s/^- \*\*Verdict \/ Risk.*/- **Verdict \/ Risk**: $VALUE/" "$FILE" 2>/dev/null || true
-        # Fallback: append if not found
-        if ! grep -q "\*\*${FIELD^}" "$FILE"; then
-          echo "- **${FIELD^}**: $VALUE" >> "$FILE"
-        fi
-        sed -i.bak "s/^- \*\*Last update.*/- **Last update**: $(date -u +%Y-%m-%dT%H:%M:%SZ)/" "$FILE"
-        rm -f "$FILE.bak"
-        echo "Updated $ID $FIELD"
-        ;;
-      *)
-        echo "Unknown field. Use: stage, risk, surfaces, worktree, gate, specialists, findings, approver"
-        exit 1
-        ;;
-    esac
-    ;;
-  show)
-    ID="${1:?ticket id required}"
-    cat "$JOBS/$ID.md" 2>/dev/null || { echo "Job $ID not found"; exit 1; }
-    ;;
-  list)
-    if [ -z "$(ls -A "$JOBS" 2>/dev/null)" ]; then
-      echo "No jobs yet."
-    else
-      for f in "$JOBS"/*.md; do
-        [ -f "$f" ] || continue
-        ID=$(basename "$f" .md)
-        STAGE=$(grep -m1 'Stage' "$f" | sed 's/.*: //' || echo "?")
-        GATE=$(grep -m1 'Gate' "$f" | sed 's/.*: //' || echo "?")
-        echo "$ID  stage=$STAGE  gate=$GATE"
-      done
-    fi
-    ;;
-  *)
-    echo "Usage: job {create|update|show|list}"
-    exit 1
-    ;;
-esac
+job_file() {
+  valid_id "$1" || die "invalid job id '$1' (use letters, digits, '.', '_', '-')"
+  echo "$JOBS_DIR/$1.json"
+}
+
+load() {
+  local f
+  f="$(job_file "$1")"
+  [ -f "$f" ] || die "job '$1' not found"
+  echo "$f"
+}
+
+validate_value() {
+  local field="$1" value="$2"
+  case "$field" in
+    stage)    in_list "$value" "$STAGES"    || die "stage must be one of: $STAGES" ;;
+    risk)     in_list "$value" "$RISKS"     || die "risk must be one of: $RISKS" ;;
+    verdict)  in_list "$value" "$VERDICTS"  || die "verdict must be one of: $VERDICTS" ;;
+    approver) in_list "$value" "$APPROVALS" || die "approver must be one of: $APPROVALS" ;;
+    surfaces) in_list "$value" "$SURFACES"  || die "surface must be one of: $SURFACES" ;;
+  esac
+  return 0
+}
+
+# Stages after the gate need a fresh, full, passing gate when gate_required is true.
+check_gate_rule() {
+  local file="$1" field="$2" value="$3" required reason
+  required="$(config_get '.gate_required' true)"
+  [ "$required" = "true" ] || return 0
+  if { [ "$field" = "stage" ] && in_list "$value" "review approver done"; } ||
+     { [ "$field" = "approver" ] && [ "$value" = "APPROVE" ]; }; then
+    reason="$(gate_fresh "$file")" || die "cannot set $field to '$value': $reason"
+  fi
+  return 0
+}
+
+do_create() {
+  local id="${1:-}" title="${2:-Untitled}" file ts
+  [ -n "$id" ] || usage
+  file="$(job_file "$id")"
+  [ -f "$file" ] && die "job '$id' already exists"
+  mkdir -p "$JOBS_DIR"
+  ts="$(now_utc)"
+  jq -n --arg id "$id" --arg title "$title" --arg ts "$ts" '{
+    id: $id, title: $title, stage: "intake", verdict: "pending", risk: "pending",
+    surfaces: [], branch: "", gate: "pending", gate_report: null, specialists: [],
+    findings: [], approver: "pending", started: $ts, updated: $ts,
+    history: [{at: $ts, event: "created"}]
+  }' | atomic_write "$file"
+  echo "Created job $id"
+}
+
+do_update() {
+  local id="${1:-}" field="${2:-}" value="${3-}" file ts
+  if [ -z "$id" ] || [ -z "$field" ] || [ "$#" -lt 3 ]; then usage; fi
+  file="$(load "$id")"
+  [ "$field" = "gate" ] && die "the gate is recorded by 'factory gate $id' only; it can't be set by hand"
+  in_list "$field" "$SCALARS" || die "unknown scalar field '$field'. Scalars: $SCALARS. For lists ($LISTS) use 'job add'."
+  validate_value "$field" "$value"
+  check_gate_rule "$file" "$field" "$value"
+  ts="$(now_utc)"
+  jq --arg f "$field" --arg v "$value" --arg ts "$ts" '
+    .history += [{at: $ts, event: "update", field: $f, from: .[$f], to: $v}]
+    | .[$f] = $v | .updated = $ts' "$file" | atomic_write "$file"
+  echo "Updated $id: $field=$value"
+}
+
+do_list_change() {
+  local op="$1" id="${2:-}" field="${3:-}" value="${4:-}" file ts
+  if [ -z "$id" ] || [ -z "$field" ] || [ -z "$value" ]; then usage; fi
+  file="$(load "$id")"
+  in_list "$field" "$LISTS" || die "unknown list field '$field'. Lists: $LISTS"
+  validate_value "$field" "$value"
+  ts="$(now_utc)"
+  if [ "$op" = add ]; then
+    jq --arg f "$field" --arg v "$value" --arg ts "$ts" '
+      .[$f] = ((.[$f] + [$v]) | unique)
+      | .history += [{at: $ts, event: "add", field: $f, value: $v}] | .updated = $ts' "$file" | atomic_write "$file"
+  else
+    jq --arg f "$field" --arg v "$value" --arg ts "$ts" '
+      .[$f] -= [$v]
+      | .history += [{at: $ts, event: "remove", field: $f, value: $v}] | .updated = $ts' "$file" | atomic_write "$file"
+  fi
+  echo "Updated $id: $op $field '$value'"
+}
+
+do_show() {
+  local file
+  file="$(load "${1:-}")"
+  if [ "${2:-}" = "--json" ]; then
+    cat "$file"
+    return
+  fi
+  jq -r '
+    "Job \(.id): \(.title)",
+    "  stage:       \(.stage)",
+    "  verdict:     \(.verdict)    risk: \(.risk)",
+    "  surfaces:    \(.surfaces | join(", "))",
+    "  branch:      \(.branch)",
+    "  gate:        \(.gate)\(if .gate_report.commit then " at \(.gate_report.commit[0:12])" else "" end)\(if .gate_report.at then " (\(.gate_report.at))" else "" end)",
+    "  specialists: \(.specialists | join(", "))",
+    "  findings:    \(.findings | length) open",
+    (.findings[] | "    - \(.)"),
+    "  approver:    \(.approver)",
+    "  started:     \(.started)",
+    "  updated:     \(.updated)"' "$file"
+}
+
+do_list() {
+  mkdir -p "$JOBS_DIR"
+  local files=() f
+  for f in "$JOBS_DIR"/*.json; do
+    [ -f "$f" ] && files+=("$f")
+  done
+  if [ "${1:-}" = "--json" ]; then
+    if [ "${#files[@]}" -eq 0 ]; then echo "[]"; else jq -s 'sort_by(.started)' "${files[@]}"; fi
+    return
+  fi
+  if [ "${#files[@]}" -eq 0 ]; then
+    echo "No jobs yet."
+    return
+  fi
+  printf '%-12s %-10s %-8s %-7s %-14s %s\n' ID STAGE RISK GATE APPROVER TITLE
+  jq -rs 'sort_by(.started)[] | [.id, .stage, .risk, .gate, .approver, .title] | @tsv' "${files[@]}" |
+    while IFS="$(printf '\t')" read -r id stage risk gate appr title; do
+      printf '%-12s %-10s %-8s %-7s %-14s %s\n' "$id" "$stage" "$risk" "$gate" "$appr" "$title"
+    done
+}
+
+main() {
+  require_jq
+  local cmd="${1:-}"
+  [ "$#" -gt 0 ] && shift
+  case "$cmd" in
+    create) with_lock do_create "$@" ;;
+    update) with_lock do_update "$@" ;;
+    add|remove) with_lock do_list_change "$cmd" "$@" ;;
+    show) do_show "$@" ;;
+    list) do_list "$@" ;;
+    -h|--help|help) usage 0 ;;
+    *) usage ;;
+  esac
+}
+
+main "$@"

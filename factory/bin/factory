@@ -1,69 +1,272 @@
 #!/usr/bin/env bash
-# Laravel Software Factory entrypoint
-# Usage:
-#   factory mode                 # show current mode
-#   factory mode auto|manual     # switch mode
-#   factory run                  # auto: list labeled issues and print next action
-#   factory run <issue-number>   # auto: prepare a job for a specific issue
-#   factory grill                # manual: remind to start Grill
-#   factory status               # list current jobs
-
+# Laravel Software Factory CLI.
+#
+#   factory mode [auto|manual]   show or set the mode
+#   factory run                  auto: claim queued GitHub issues up to the concurrency limit
+#   factory run <issue>          auto: claim one issue, create its job, print the handoff
+#   factory grill                manual: print the Intake (grill) handoff
+#   factory doctor               check the tools and project setup the factory needs
+#   factory gate <job-id> [--docker]   run the gate and record the result on the job
+#   factory escalate <job-id> <reason>   mark a job blocked and label the issue for a human
+#   factory status               list jobs
+#   factory dashboard            generate docs/context/dashboard.html from job state
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CONFIG="$ROOT/factory/config.json"
+# shellcheck source=../lib/common.sh
+. "$(cd "$(dirname "$0")/../lib" && pwd)/common.sh"
 JOB="$ROOT/factory/bin/job"
 
-mode() {
-  if [ $# -eq 0 ]; then
-    jq -r '.mode' "$CONFIG"
-  else
-    jq --arg m "$1" '.mode = $m' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
-    echo "Mode set to $1"
-  fi
+usage() {
+  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
 }
 
-case "${1:-}" in
-  mode)
-    shift
-    mode "$@"
-    ;;
-  run)
-    CURRENT=$(mode)
-    if [ "$CURRENT" != "auto" ]; then
-      echo "Auto mode is not active. Run: factory mode auto"
-      exit 1
-    fi
-    ISSUE="${2:-}"
-    if [ -n "$ISSUE" ]; then
-      echo "Preparing job for issue #$ISSUE"
-      "$JOB" create "$ISSUE" "Issue #$ISSUE" || true
-      "$JOB" show "$ISSUE"
-      echo ""
-      echo "Next: hand this to the Orchestrator with the issue body."
-      echo "Pipeline: Intake → Spec → Tickets → Implement → Gate → Review → Approver"
-      echo "Gate: $ROOT/factory/checks.sh"
-    else
-      echo "Auto mode ready."
-      echo "Label issues with 'factory' then run: factory run <issue-number>"
-      echo "Or give a prompt directly to the Orchestrator."
-      echo "Current jobs:"
-      "$JOB" list
-    fi
-    ;;
-  grill)
-    CURRENT=$(mode)
-    if [ "$CURRENT" != "manual" ]; then
-      echo "Manual mode is not active. Run: factory mode manual"
-      exit 1
-    fi
-    echo "Manual mode: start the Grill agent (agents/grill.md)."
-    echo "Grill will ask questions and require explicit permission before Spec or implementation."
-    ;;
-  status)
-    "$JOB" list
-    ;;
-  *)
-    echo "Usage: factory {mode|run|grill|status}"
-    exit 1
-    ;;
-esac
+current_mode() { config_get '.mode' manual; }
+
+cmd_mode() {
+  if [ "$#" -eq 0 ]; then
+    current_mode
+    return
+  fi
+  in_list "$1" "auto manual" || die "mode must be 'auto' or 'manual'"
+  jq --arg m "$1" '.mode = $m' "$CONFIG" | atomic_write "$CONFIG"
+  echo "Mode set to $1"
+}
+
+require_mode() {
+  [ "$(current_mode)" = "$1" ] || die "$1 mode is not active (run: factory mode $1)"
+}
+
+require_gh() {
+  require_cmd gh "Install the GitHub CLI (https://cli.github.com) and run 'gh auth login'."
+}
+
+active_jobs() {
+  "$JOB" list --json | jq '[.[] | select(.stage != "done" and .stage != "blocked")] | length'
+}
+
+handoff() {
+  local id="$1"
+  cat <<MSG
+
+Handoff for the Orchestrator (paste into your coding agent):
+------------------------------------------------------------
+You are the Orchestrator (agents/orchestrator.md). Mode: $(current_mode).
+Job: $id — state in docs/context/jobs/$id.json, issue text in docs/context/jobs/$id.issue.md.
+Start with agents/intake.md. Keep job state current with ./factory/bin/job.
+Run ./factory/bin/factory gate $id before any review.
+------------------------------------------------------------
+MSG
+}
+
+claim_issue() {
+  local n="$1" queue progress issue title
+  valid_id "$n" || die "invalid issue number '$n'"
+  queue="$(config_get '.labels.queue' factory)"
+  progress="$(config_get '.labels.in_progress' factory:in-progress)"
+  issue="$(gh issue view "$n" --json number,title,body,labels,url)" || die "could not read issue #$n"
+  title="$(echo "$issue" | jq -r '.title')"
+  if [ -f "$JOBS_DIR/$n.json" ]; then
+    echo "Job $n already exists; resuming."
+  else
+    "$JOB" create "$n" "$title"
+  fi
+  echo "$issue" | jq -r '"# #\(.number) \(.title)\n\n\(.url)\n\n\(.body)"' | atomic_write "$JOBS_DIR/$n.issue.md"
+  gh issue edit "$n" --add-label "$progress" --remove-label "$queue" >/dev/null ||
+    warn "could not relabel issue #$n (does label '$progress' exist?)"
+  handoff "$n"
+}
+
+cmd_run() {
+  require_mode auto
+  require_gh
+  if [ "$#" -gt 0 ]; then
+    claim_issue "$1"
+    return
+  fi
+  local limit active slots queue numbers n
+  limit="$(config_get '.concurrency' 3)"
+  active="$(active_jobs)"
+  slots=$((limit - active))
+  if [ "$slots" -le 0 ]; then
+    echo "Concurrency limit reached ($active/$limit active jobs). Finish or block a job first."
+    return 0
+  fi
+  queue="$(config_get '.labels.queue' factory)"
+  numbers="$(gh issue list --label "$queue" --state open --limit "$slots" --json number --jq '.[].number')"
+  if [ -z "$numbers" ]; then
+    echo "No open issues labeled '$queue'."
+    return 0
+  fi
+  for n in $numbers; do claim_issue "$n"; done
+}
+
+cmd_grill() {
+  require_mode manual
+  cat <<'MSG'
+Manual mode. Paste into your coding agent:
+------------------------------------------------------------
+You are the Orchestrator (agents/orchestrator.md). Mode: manual.
+Run agents/intake.md in grill mode: interrogate me until intent is sharp,
+record domain language in docs/context/domain.md, and ask my explicit
+permission before writing a Spec or starting implementation.
+------------------------------------------------------------
+MSG
+}
+
+cmd_gate() {
+  local id="" docker=0 report status=0 result arg
+  for arg in "$@"; do
+    case "$arg" in
+      --docker) docker=1 ;;
+      *) id="$arg" ;;
+    esac
+  done
+  [ -n "$id" ] || usage
+  "$JOB" show "$id" >/dev/null
+  # Always the full gate: a FACTORY_GATE_ONLY subset must never be recorded as a pass.
+  if [ "$docker" -eq 1 ]; then
+    report="$JOBS_DIR/.gate-$id.json"
+    rm -f "$report"
+    run_gate_in_docker "/app/docs/context/jobs/.gate-$id.json" || status=$?
+  else
+    report="$(mktemp)"
+    FACTORY_GATE_ONLY="" FACTORY_GATE_REPORT="$report" "$ROOT/factory/checks.sh" || status=$?
+  fi
+  [ -s "$report" ] || { rm -f "$report"; die "gate did not produce a report"; }
+  result="$(jq -r '.result // empty' "$report" 2>/dev/null || true)"
+  if ! in_list "$result" "pass fail"; then rm -f "$report"; die "gate report is not valid"; fi
+  with_lock _store_report "$id" "$report"
+  rm -f "$report"
+  echo "Recorded gate=$result on job $id"
+  return "$status"
+}
+
+DOCKER_IMAGE="laravel-factory-gate"
+
+run_gate_in_docker() {
+  require_cmd docker "Install Docker, or install PHP 8.3+, Composer and jq locally (see: factory doctor)."
+  if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
+    echo "Building $DOCKER_IMAGE (first run only)..."
+    docker build -t "$DOCKER_IMAGE" "$ROOT/factory/docker" || die "docker build failed"
+  fi
+  docker run --rm \
+    -v "$ROOT:/app" -v /app/vendor -v /app/node_modules \
+    -e FACTORY_GATE_ONLY= -e FACTORY_GATE_REPORT="$1" \
+    "$DOCKER_IMAGE"
+}
+
+cmd_doctor() {
+  local bad=0
+  ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+  fail() { printf '  \033[31m✖\033[0m %s\n' "$1"; bad=1; }
+  note() { printf '  - %s\n' "$1"; }
+  have() { command -v "$1" >/dev/null 2>&1; }
+
+  echo "Tools"
+  if have php; then
+    if php -r 'exit(PHP_VERSION_ID >= 80300 ? 0 : 1);'; then ok "php $(php -r 'echo PHP_VERSION;')"
+    else fail "php $(php -r 'echo PHP_VERSION;') (8.3+ required)"; fi
+  else fail "php not found"; fi
+  if have composer; then ok "composer"; else fail "composer not found"; fi
+  ok "jq"
+  if have git; then ok "git"; else fail "git not found"; fi
+  if [ -f "$ROOT/package.json" ]; then
+    if have npm; then ok "npm"; else fail "npm not found (package.json exists)"; fi
+  fi
+  if [ "$(current_mode)" = "auto" ]; then
+    if have gh && gh auth status >/dev/null 2>&1; then ok "gh (authenticated)"
+    else fail "gh missing or not authenticated (required in auto mode)"; fi
+  fi
+
+  echo "Project"
+  if [ -f "$ROOT/artisan" ]; then ok "Laravel project"; else fail "no artisan in $ROOT"; fi
+  if [ -d "$ROOT/vendor" ]; then ok "vendor/ installed"; else fail "vendor/ missing: composer install"; fi
+  local p
+  for p in pest pint phpstan; do
+    if [ -x "$ROOT/vendor/bin/$p" ]; then ok "vendor/bin/$p"; else fail "vendor/bin/$p missing"; fi
+  done
+  if grep -qs 'larastan/extension.neon' "$ROOT"/phpstan.neon*; then ok "phpstan uses Larastan"
+  else fail "phpstan config missing or not including Larastan"; fi
+  if [ -n "$(find "$ROOT/tests/Architecture" -name '*Test.php' 2>/dev/null | head -1)" ]; then ok "architecture tests"
+  else fail "no tests in tests/Architecture"; fi
+  if [ "$(config_get '.gate.api' required)" != "off" ]; then
+    if [ -f "$ROOT/routes/api.php" ]; then ok "routes/api.php"
+    else fail "routes/api.php missing: php artisan install:api"; fi
+  fi
+  if [ -f "$ROOT/package.json" ] && [ ! -f "$ROOT/package-lock.json" ]; then fail "package-lock.json missing"; fi
+
+  if [ "$bad" -ne 0 ]; then
+    echo ""
+    note "No local PHP toolchain? Run the gate in a container instead: factory gate <job-id> --docker"
+    return 1
+  fi
+  echo ""
+  echo "Ready."
+}
+
+# The only writer of .gate: result and report land together, atomically.
+_store_report() {
+  local file="$JOBS_DIR/$1.json" ts
+  ts="$(now_utc)"
+  jq --slurpfile r "$2" --arg ts "$ts" '
+    .history += [{at: $ts, event: "gate", from: .gate, to: $r[0].result, commit: ($r[0].commit // null)}]
+    | .gate = $r[0].result | .gate_report = $r[0] | .updated = $ts' "$file" | atomic_write "$file"
+}
+
+cmd_escalate() {
+  local id="${1:-}" reason="${2:-}" label
+  if [ -z "$id" ] || [ -z "$reason" ]; then usage; fi
+  "$JOB" update "$id" stage blocked
+  "$JOB" add "$id" findings "ESCALATED: $reason"
+  label="$(config_get '.labels.needs_human' factory:needs-human)"
+  if command -v gh >/dev/null 2>&1 && [ -f "$JOBS_DIR/$id.issue.md" ]; then
+    gh issue edit "$id" --add-label "$label" >/dev/null || warn "could not label issue #$id"
+    gh issue comment "$id" --body "Factory escalation: $reason" >/dev/null || warn "could not comment on issue #$id"
+  fi
+  echo "Job $id escalated."
+}
+
+cmd_dashboard() {
+  local out="$ROOT/docs/context/dashboard.html"
+  "$JOB" list --json | jq -r --arg mode "$(current_mode)" --arg at "$(now_utc)" '
+    def esc: tostring | gsub("&";"&amp;") | gsub("<";"&lt;") | gsub(">";"&gt;");
+    def pill($v): "<span class=\"pill \($v | esc)\">\($v | esc)</span>";
+    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">",
+    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+    "<title>Factory dashboard</title><style>",
+    ":root{--bg:#f8fafc;--fg:#0f172a;--muted:#64748b;--card:#fff;--line:#e2e8f0}",
+    "@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--fg:#e2e8f0;--muted:#94a3b8;--card:#1e293b;--line:#334155}}",
+    "body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:2rem}",
+    ".wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;background:var(--card)}",
+    "th,td{padding:.5rem .75rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}",
+    "th{color:var(--muted);font-size:.75rem;text-transform:uppercase}",
+    ".pill{padding:.1rem .5rem;border-radius:999px;font-size:.8rem;background:var(--line)}",
+    ".pass,.APPROVE,.done{background:#166534;color:#fff}.fail,.ESCALATE,.blocked,.high{background:#991b1b;color:#fff}",
+    ".NEEDS-CHANGES,.medium{background:#a16207;color:#fff}",
+    "</style></head><body>",
+    "<h1>Factory dashboard</h1><p>Mode: \(pill($mode)) · \(length) jobs · generated \($at)</p>",
+    "<div class=\"wrap\"><table><tr><th>Job</th><th>Title</th><th>Stage</th><th>Risk</th><th>Gate</th><th>Approver</th><th>Findings</th><th>Updated</th></tr>",
+    (.[] | "<tr><td>\(.id | esc)</td><td>\(.title | esc)</td><td>\(pill(.stage))</td><td>\(pill(.risk))</td><td>\(pill(.gate))</td><td>\(pill(.approver))</td><td>\(.findings | length)</td><td>\(.updated | esc)</td></tr>"),
+    "</table></div></body></html>"' | atomic_write "$out"
+  echo "Wrote $out"
+}
+
+main() {
+  require_jq
+  local cmd="${1:-}"
+  [ "$#" -gt 0 ] && shift
+  case "$cmd" in
+    mode) cmd_mode "$@" ;;
+    run) cmd_run "$@" ;;
+    grill) cmd_grill ;;
+    gate) cmd_gate "$@" ;;
+    doctor) cmd_doctor ;;
+    escalate) cmd_escalate "$@" ;;
+    status) "$JOB" list ;;
+    dashboard) cmd_dashboard ;;
+    -h|--help|help) usage 0 ;;
+    *) usage ;;
+  esac
+}
+
+main "$@"

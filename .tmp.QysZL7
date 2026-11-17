@@ -1,0 +1,22 @@
+{
+  "id": "../escape",
+  "title": "Untitled",
+  "stage": "intake",
+  "verdict": "pending",
+  "risk": "pending",
+  "surfaces": [],
+  "branch": "",
+  "gate": "pending",
+  "gate_report": null,
+  "specialists": [],
+  "findings": [],
+  "approver": "pending",
+  "started": "2026-11-17T07:29:44Z",
+  "updated": "2026-11-17T07:29:44Z",
+  "history": [
+    {
+      "at": "2026-11-17T07:29:44Z",
+      "event": "created"
+    }
+  ]
+}

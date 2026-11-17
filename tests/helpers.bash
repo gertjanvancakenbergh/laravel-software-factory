@@ -32,7 +32,30 @@ make_fake_laravel() {
   printf '#!/bin/sh\necho "composer $*" >> "%s/calls.log"\nexit ${FAIL_composer:-0}\n' "$PROJECT" > bin/composer
   printf '#!/bin/sh\necho "npm $*" >> "%s/calls.log"\nexit ${FAIL_npm:-0}\n' "$PROJECT" > bin/npm
   chmod +x bin/composer bin/npm
+  # php stub: `php artisan route:list ...` prints routes.json.
+  printf '#!/bin/sh\necho "php $*" >> "%s/calls.log"\nif [ "$2" = "route:list" ]; then cat "%s/routes.json"; fi\nexit ${FAIL_php:-0}\n' "$PROJECT" "$PROJECT" > bin/php
+  chmod +x bin/php
+  mkdir -p routes tests/Feature
+  echo '<?php' > routes/api.php
+  set_routes '[{"method":"GET|HEAD","uri":"api/v1/films","middleware":["api","Illuminate\\Routing\\Middleware\\ThrottleRequests:api"]}]'
+  echo "<?php it('lists', fn () => \$this->getJson('/api/v1/films')->assertOk());" > tests/Feature/FilmsTest.php
   export PATH="$PROJECT/bin:$PATH"
+}
+
+set_routes() {
+  printf '%s' "$1" > "$PROJECT/routes.json"
+}
+
+# Commit the whole fake project; generated test files are ignored like a real
+# project ignores vendor/.
+git_commit_all() {
+  if [ ! -d "$PROJECT/.git" ]; then
+    git -C "$PROJECT" init -q
+    printf 'bin/\nvendor/\ncalls.log\nroutes.json\n' > "$PROJECT/.gitignore"
+  fi
+  git -C "$PROJECT" add -A
+  git -C "$PROJECT" -c user.name=test -c user.email=test@example.test \
+    -c commit.gpgsign=false commit -q -m "${1:-change}"
 }
 
 cleanup_project() {
