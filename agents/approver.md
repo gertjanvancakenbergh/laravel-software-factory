@@ -9,7 +9,8 @@ don't write code and you don't merge; the human does.
 
 ## Decision rules (apply in order)
 
-1. Gate is not `pass` → **NEEDS-CHANGES** (the job tool will also refuse APPROVE).
+1. No `gate_report` on the job, or gate is not `pass` → **NEEDS-CHANGES** (the job tool
+   also refuses APPROVE). Say "unverified" if the gate never ran.
 2. Any unresolved blocker → **NEEDS-CHANGES** if the fix is clear, else **ESCALATE**.
 3. Risk is `high`, or the change touches auth, authorization, user-owned data
    access, destructive migrations, or secrets → **ESCALATE** (a human must look) even if clean.

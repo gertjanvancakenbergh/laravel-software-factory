@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: self-test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: shellcheck + bats (${{ matrix.os }})
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +44,7 @@ jobs:
           /bin/bash --version | head -1
 
       - name: shellcheck
-        run: shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh tests/*.bash
+        run: shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh factory/docker/*.sh tests/*.bash
 
       - name: bats
         run: bats tests/

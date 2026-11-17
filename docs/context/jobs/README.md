@@ -1,14 +1,15 @@
 # Job State Directory
 
-Each active or completed job has a Markdown file here (e.g. `42.md`).
-
-Manage them with:
+One JSON file per job (`42.json`), plus `42.issue.md` with the GitHub issue text
+when the job was claimed in auto mode. Manage them with the CLI, not by hand:
 
 ```bash
 ./factory/bin/job create <id> [title]
 ./factory/bin/job update <id> <field> <value>
-./factory/bin/job show <id>
-./factory/bin/job list
+./factory/bin/job add|remove <id> <list-field> <value>
+./factory/bin/job show <id> [--json]
+./factory/bin/job list [--json]
+./factory/bin/factory gate <id>
 ```
 
-The Orchestrator and agents should keep these up to date so work can be resumed and observed.
+Fields and allowed values: `docs/factory/templates/job-state.md`.

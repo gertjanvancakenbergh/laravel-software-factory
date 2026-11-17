@@ -72,6 +72,7 @@ echo "Installing Laravel Software Factory into $TARGET"
 put_tree agents agents owned
 put_tree factory/bin factory/bin owned
 put_tree factory/lib factory/lib owned
+put_tree factory/docker factory/docker owned
 put factory/checks.sh factory/checks.sh owned
 put_tree docs/factory docs/factory owned
 put_tree examples docs/factory/examples owned
@@ -111,7 +112,7 @@ elif ! grep -qF "$MARKER" "$TARGET/AGENTS.md"; then
 fi
 
 # .gitignore entries for generated files.
-for line in "docs/context/dashboard.html" "docs/context/jobs/.lock" "docs/context/jobs/.tmp.*"; do
+for line in "docs/context/dashboard.html" "docs/context/jobs/.lock" "docs/context/jobs/.tmp.*" "docs/context/jobs/.gate-*.json"; do
   if ! grep -qxF "$line" "$TARGET/.gitignore" 2>/dev/null; then
     echo "  append  .gitignore: $line"
     [ "$DRY" -eq 1 ] || echo "$line" >> "$TARGET/.gitignore"
@@ -130,6 +131,12 @@ else
   echo "  composer require --dev --with-all-dependencies pestphp/pest pestphp/pest-plugin-laravel larastan/larastan laravel/pao"
 fi
 
+if [ ! -f "$TARGET/routes/api.php" ]; then
+  echo ""
+  echo "Note: routes/api.php is missing. Laravel 11+ needs 'php artisan install:api' before API"
+  echo "routes load; the gate fails until it exists (or set gate.api to \"off\")."
+fi
+
 echo ""
 echo "Done: $CREATED created, $UPDATED updated, $SKIPPED project files kept."
-echo "Next: run ./factory/checks.sh, then require the 'Deterministic Gate' check on main."
+echo "Next: run ./factory/bin/factory doctor, then require the 'Deterministic Gate' check on main."

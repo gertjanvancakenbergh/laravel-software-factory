@@ -13,19 +13,23 @@ end-to-end. See `docs/factory/readiness.md` for what is verified and what isn't.
 Intake (grill the human in manual mode) → Spec + test plan → Tickets →
 Implement (TDD, one worktree per ticket) → **Gate** → Review → Approver → human merge.
 
-The gate is `factory/checks.sh`. CI runs the same script, and the job tool will
-not let a job move to review or be approved until the gate has passed.
+The gate is `factory/checks.sh`: tests, architecture rules, Pint, PHPStan, audits,
+and API checks (every route registered, rate limited and tested). CI runs the same script, and the job tool will
+not let a job move to review or be approved until the gate has passed on the
+current commit. Only `factory gate` can record that pass.
 
 ## Install
 
 Requirements: PHP 8.3+, Composer, `jq`, and the GitHub CLI (`gh`) for auto mode.
+No PHP locally? You can still run the gate with Docker (`factory gate <job> --docker`).
 
 ```bash
 composer create-project laravel/laravel star-wars-api
 git clone https://github.com/gertjanvancakenbergh/laravel-software-factory
 ./laravel-software-factory/install.sh star-wars-api --install-deps
 cd star-wars-api
-./factory/checks.sh
+php artisan install:api
+./factory/bin/factory doctor
 ```
 
 `install.sh` never overwrites project files. It updates factory-owned files
@@ -43,7 +47,8 @@ Then require the **Deterministic Gate** status check on `main`.
 ./factory/bin/factory mode [auto|manual]   # default: manual
 ./factory/bin/factory grill                # manual: handoff that starts grilling
 ./factory/bin/factory run [issue]          # auto: claim issues labeled `factory` (up to `concurrency`)
-./factory/bin/factory gate <job>           # run the gate and record the result on the job
+./factory/bin/factory doctor               # check tools and project setup
+./factory/bin/factory gate <job> [--docker]  # run the gate (locally or in Docker) and record it on the job
 ./factory/bin/factory escalate <job> "why" # block the job and label the issue for a human
 ./factory/bin/factory status               # list jobs
 ./factory/bin/factory dashboard            # write docs/context/dashboard.html
@@ -84,6 +89,12 @@ encyclopedia API; `examples/starter-prompt.md` starts the Orchestrator on it.
 ## Developing the factory
 
 ```bash
-shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh tests/*.bash
+shellcheck install.sh factory/checks.sh factory/bin/* factory/lib/*.sh factory/docker/*.sh tests/*.bash
 bats tests/
 ```
+
+CI runs both on Ubuntu and on macOS with Apple's bash 3.2, so keep scripts
+bash 3.2 compatible (no associative arrays, `mapfile`, `${var,,}` or `;&`).
+Add new scripts to `SCRIPTS` in `tests/repo.bats` so their executable bit is
+guarded; after creating one, run `git update-index --chmod=+x <file>` if your
+editor or upload path drops it.

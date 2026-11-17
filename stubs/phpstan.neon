@@ -1,0 +1,13 @@
+# Installed by laravel-software-factory. Requires: composer require --dev larastan/larastan
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # Start at 6 and ratchet upward. Use a baseline rather than lowering the level:
+    #   vendor/bin/phpstan analyse --generate-baseline
+    level: 6
+    paths:
+        - app
+        - database
+        - routes
+    tmpDir: storage/framework/cache/phpstan

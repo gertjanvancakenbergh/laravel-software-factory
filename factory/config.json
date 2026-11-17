@@ -3,7 +3,12 @@
   "concurrency": 3,
   "gate_required": true,
   "gate": {
-    "frontend": "auto"
+    "frontend": "auto",
+    "api": "required",
+    "require_throttle": true,
+    "require_route_tests": true,
+    "api_route_ignore": [],
+    "seeders_ignore": []
   },
   "labels": {
     "queue": "factory",
